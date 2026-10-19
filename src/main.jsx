@@ -6,6 +6,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router'
 
 //import App from './App.jsx'
 import LoginRegistro from './componentes/zonaCliente/registro/LoginRegistro.jsx'
+import LoginGoogleCallback from './componentes/zonaCliente/registro/LoginGoogleCallback.jsx'
 import Layout from './componentes/zonaTienda/Layout/Layout.jsx'
 import Home from './componentes/zonaTienda/Home/Home.jsx'
 import ProductosCat from './componentes/zonaTienda/Productos/ProductosCat.jsx'
@@ -32,6 +33,8 @@ import ProductosCat from './componentes/zonaTienda/Productos/ProductosCat.jsx'
         }, 
       //--- objeto route para la ruta de login y registro de clientes
       { path: '/Cliente/LoginRegistro', element: <LoginRegistro /> },
+      // El backend redirige aquí después de completar el callback OAuth de Google.
+      { path: '/Cliente/LoginGoogleCallback', element: <LoginGoogleCallback /> },
       //--- objeto route para el dashboard de clientes y rutas hijas para las diferentes secciones del dashboard
       //{}
     ] //<---- array de objetos Route de react-router

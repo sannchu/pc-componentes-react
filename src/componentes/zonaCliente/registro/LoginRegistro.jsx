@@ -1,9 +1,14 @@
 import './LoginRegistro.css';
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
+
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
 
 function LoginRegistro(){
 
     const [ enLogin, setEnLogin ] = useState(false); // valor inicial es false, es decir, estamos en modo registro
+    const [ errorGoogle, setErrorGoogle ] = useState('');
+    const navigate = useNavigate();
     
     const [ formData, setFormData ] = useState(
         {
@@ -55,6 +60,62 @@ function LoginRegistro(){
     console.log('datos a mandar al server....', formData );
   }
 
+  async function handlerGoogleLoginClick(){
+    setErrorGoogle('');
+
+    // Abrir la ventana durante el clic evita que el navegador bloquee el popup tras el fetch.
+    const popupGoogle=window.open('', 'popupGoogle', 'width=600,height=600');
+    if(!popupGoogle){
+      setErrorGoogle('El navegador ha bloqueado la ventana emergente de Google. Permítela e inténtalo de nuevo.');
+      return;
+    }
+
+    let temporizadorPopup;
+    const limpiarEventosPopup=()=>{
+      window.removeEventListener('message', recibirMensajeGoogle);
+      window.clearInterval(temporizadorPopup);
+    };
+
+    const recibirMensajeGoogle=(evento)=>{
+      if(evento.origin !== window.location.origin || evento.source !== popupGoogle) return;
+
+      if(evento.data?.tipo === 'LOGIN_GOOGLE_OK' && evento.data.token){
+        localStorage.setItem('token', evento.data.token);
+        if(evento.data.email) localStorage.setItem('email', evento.data.email);
+        if(evento.data.nombre) localStorage.setItem('nombre', evento.data.nombre);
+        limpiarEventosPopup();
+        navigate('/');
+      }else if(evento.data?.tipo === 'LOGIN_GOOGLE_ERROR'){
+        setErrorGoogle(evento.data.mensaje || 'No se pudo iniciar sesión con Google.');
+        limpiarEventosPopup();
+        popupGoogle.close();
+      }
+    };
+
+    window.addEventListener('message', recibirMensajeGoogle);
+    temporizadorPopup=window.setInterval(()=>{
+      if(popupGoogle.closed) limpiarEventosPopup();
+    }, 500);
+
+    try{
+      const respuesta=await fetch(`${API_URL}/api/Cliente/LoginGoogle`, {
+        credentials: 'include'
+      });
+      const respuestaJson=await respuesta.json();
+
+      if(!respuesta.ok || respuestaJson.codigo !== 0 || !respuestaJson.datos?.url){
+        throw new Error(respuestaJson.mensaje || 'El servidor no pudo iniciar el acceso con Google.');
+      }
+
+      popupGoogle.location.href=respuestaJson.datos.url;
+      popupGoogle.focus();
+    }catch(error){
+      limpiarEventosPopup();
+      popupGoogle.close();
+      setErrorGoogle(`Error al iniciar sesión con Google: ${error.message}`);
+    }
+  }
+
     return <div className="container">
         
         <div className="row">
@@ -74,7 +135,8 @@ function LoginRegistro(){
                 <div className="container">
                     
                     <div className="row"><div className="col"><h4><strong>{ enLogin ? "Iniciar sesión" : "Crear cuenta" }</strong></h4></div></div>
-                    <div className="row m-3"><div className="col d-grid gap-1"><button type="button" id="btnlogingmail"  className="btn btn-light btn-sm" ><img  src="/imagenes/boton_login_GMAIL.png"/></button></div></div>
+                    <div className="row m-3"><div className="col d-grid gap-1"><button type="button" id="btnlogingmail" className="btn btn-light btn-sm" onClick={handlerGoogleLoginClick} aria-label="Iniciar sesión con Google"><img src="/imagenes/boton_login_GMAIL.png" alt="Iniciar sesión con Google"/></button></div></div>
+                    {errorGoogle && <div className="alert alert-danger" role="alert">{errorGoogle}</div>}
                     <div className="row"><div className="col m-4"><h6><span> O bien </span></h6></div></div>
 
                     <div className="row">

@@ -1,7 +1,23 @@
 import './OffCanvas.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { categoryChildren, categoryName, categorySlug, getCategories } from '../../../../../servicios/catalogo.js'
+import { categoryChildren, categoryName, categorySlug, getCategories, slugifyCategory } from '../../../../../servicios/catalogo.js'
+
+function routeForCategory(category, parentPath = []) {
+  const slug = categorySlug(category)
+  // The laptop category is specifically exposed at /categorias/portatiles.
+  const isLaptops = slug === 'portatiles' && slugifyCategory(categoryName(category)) === 'portatiles'
+  const segments = isLaptops ? [slug] : [...parentPath, slug]
+  return `/categorias/${segments.filter(Boolean).join('/')}`
+}
+
+function CategoryIcon({ category }) {
+  const icon = typeof category?.icon === 'string' ? category.icon.trim() : ''
+  if (icon) return <img className="category-icon" src={icon} alt="" aria-hidden="true" />
+  const name = slugifyCategory(categoryName(category))
+  const fallback = name === 'ordenadores' ? '▣' : name === 'componentes' ? '▦' : '◈'
+  return <span className="category-icon category-icon-fallback" aria-hidden="true">{fallback}</span>
+}
 
 function OffCanvasCats() {
   const [open, setOpen] = useState(false)
@@ -30,7 +46,7 @@ function OffCanvasCats() {
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') close()
       if (event.key === 'Tab') {
-        const focusable = drawerRef.current?.querySelectorAll('button:not(:disabled)')
+        const focusable = drawerRef.current?.querySelectorAll('button:not(:disabled), a[href]')
         if (!focusable?.length) return
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
@@ -48,29 +64,35 @@ function OffCanvasCats() {
     }
   }, [open, close])
 
-  const goToCategory = (category, parentPath = []) => {
-    const path = [...parentPath, categorySlug(category)].filter(Boolean).join('/')
-    if (!path) return
-    navigate(`/productos/${path}`)
+  const goToCategory = (category, parentPath = [], descendants = false) => {
+    const route = routeForCategory(category, parentPath)
+    navigate(`${route}${descendants ? '?descendientes=true' : ''}`)
     close()
   }
 
-  const renderChildren = (items, parentPath, level = 1) => (
+  const toggleExpanded = (key) => setExpanded((current) => ({ ...current, [key]: !current[key] }))
+
+  const renderChildren = (items, parentPath = [], level = 1) => (
     <ul className={`category-list category-list-level-${level}`}>
       {items.map((item) => {
         const children = categoryChildren(item)
         const slug = categorySlug(item)
-        const path = [...parentPath, slug]
-        const isExpanded = Boolean(expanded[path.join('/')])
+        const itemPath = [...parentPath, slug]
+        const key = itemPath.join('/')
+        const isExpanded = Boolean(expanded[key])
         return (
-          <li key={item._id ?? path.join('/') } className="category-item">
-            <div className="category-item-row">
-              <button className="category-link" type="button" onClick={() => goToCategory(item, parentPath)}>
-                {categoryName(item)}
-              </button>
-              {children.length > 0 && <button className="category-expand" type="button" aria-label={`${isExpanded ? 'Contraer' : 'Expandir'} ${categoryName(item)}`} aria-expanded={isExpanded} onClick={() => setExpanded((current) => ({ ...current, [path.join('/')]: !current[path.join('/')] }))}>{isExpanded ? '−' : '+'}</button>}
-            </div>
-            {children.length > 0 && isExpanded && renderChildren(children, path, level + 1)}
+          <li key={item._id ?? item.pathCat ?? key} className="category-item">
+            {children.length > 0 ? <>
+              <div className={`category-accordion-heading${isExpanded ? ' is-expanded' : ''}`}>
+                <button className="category-accordion-toggle" type="button" aria-expanded={isExpanded} aria-controls={`category-children-${key.replaceAll('/', '-')}`} onClick={() => toggleExpanded(key)}>
+                  <span>{categoryName(item)}</span><span className="category-chevron" aria-hidden="true">{isExpanded ? '⌃' : '⌄'}</span>
+                </button>
+              </div>
+              <div id={`category-children-${key.replaceAll('/', '-')}`} className="category-accordion-content" hidden={!isExpanded}>
+                <button className="category-all-link" type="button" onClick={() => goToCategory(item, parentPath, true)}>Todo en {categoryName(item)}</button>
+                {renderChildren(children, itemPath, level + 1)}
+              </div>
+            </> : <button className="category-link" type="button" onClick={() => goToCategory(item, parentPath)}>{categoryName(item)}</button>}
           </li>
         )
       })}
@@ -85,27 +107,30 @@ function OffCanvasCats() {
       {open && <button className="category-backdrop" type="button" aria-label="Cerrar categorías" onClick={close} />}
       <aside ref={drawerRef} id="category-drawer" className={`category-drawer${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-labelledby="category-drawer-title" aria-hidden={!open}>
         <header className="category-drawer-header">
+          <h2 id="category-drawer-title" className="visually-hidden">Categorías</h2>
           {selectedRoot && <button type="button" className="category-back" onClick={() => setSelectedRoot(null)}>← Categorías</button>}
-          <h2 id="category-drawer-title">Categorías</h2>
           <button type="button" className="category-close" aria-label="Cerrar categorías" onClick={close}>×</button>
         </header>
         <div className="category-drawer-body">
-          <div className={`category-roots${selectedRoot ? ' has-selection' : ''}`} aria-label="Categorías principales">
+          <section className={`category-roots${selectedRoot ? ' has-selection' : ''}`} aria-label="Categorías principales">
+            <h2>Categorías</h2>
             {status === 'loading' && <p role="status">Cargando categorías…</p>}
             {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); setReload((current) => current + 1) }}>Reintentar</button></div>}
             {status === 'empty' && <p>No hay categorías disponibles.</p>}
             {status === 'ready' && <ul className="category-list">
               {categories.map((category) => {
                 const children = categoryChildren(category)
-                return <li key={category._id ?? categorySlug(category)} className="category-item">
-                  {children.length ? <button type="button" className={`category-root${selectedRoot === category ? ' is-selected' : ''}`} aria-pressed={selectedRoot === category} onClick={() => setSelectedRoot(category)}>{categoryName(category)} <span aria-hidden="true">›</span></button> : <button type="button" className="category-link" onClick={() => goToCategory(category)}>{categoryName(category)}</button>}
+                const selected = selectedRoot?.pathCat ? selectedRoot.pathCat === category.pathCat : selectedRoot === category
+                return <li key={category._id ?? category.pathCat ?? categorySlug(category)} className="category-item">
+                  {children.length ? <button type="button" className={`category-root${selected ? ' is-selected' : ''}`} aria-pressed={selected} onClick={() => { setSelectedRoot(category); setExpanded({}) }}><CategoryIcon category={category} /><span className="category-root-label">{categoryName(category)}</span><span className="category-chevron" aria-hidden="true">›</span></button> : <button type="button" className="category-root" onClick={() => goToCategory(category)}><CategoryIcon category={category} /><span className="category-root-label">{categoryName(category)}</span><span className="category-chevron" aria-hidden="true">›</span></button>}
                 </li>
               })}
             </ul>}
-          </div>
+          </section>
           <section className={`category-subcategories${selectedRoot ? ' has-selection' : ''}`} aria-label={selectedRoot ? `Subcategorías de ${categoryName(selectedRoot)}` : 'Subcategorías'}>
             {selectedRoot ? <>
               <h3>{categoryName(selectedRoot)}</h3>
+              <button className="category-all-link category-root-all" type="button" onClick={() => goToCategory(selectedRoot, [], true)}>Todo en {categoryName(selectedRoot)}</button>
               {categoryChildren(selectedRoot).length ? renderChildren(categoryChildren(selectedRoot), [categorySlug(selectedRoot)]) : <p>Esta categoría no tiene subcategorías.</p>}
             </> : <p className="category-selection-hint">Selecciona una categoría para ver sus subcategorías.</p>}
           </section>

@@ -55,8 +55,9 @@ export async function getCategories({ signal } = {}) {
   return buildCategoryTree(categories)
 }
 
-export async function getProductsByCategory(categoryPath, { signal } = {}) {
+export async function getProductsByCategory(categoryPath, { signal, descendants = false } = {}) {
   const query = new URLSearchParams({ categoria: categoryPath })
+  if (descendants) query.set('descendientes', 'true')
   const response = await fetch(`${API_BASE_URL}/Productos?${query}`, { signal })
   if (!response.ok) throw new Error(`No se pudieron cargar los productos (${response.status})`)
   const payload = await response.json()

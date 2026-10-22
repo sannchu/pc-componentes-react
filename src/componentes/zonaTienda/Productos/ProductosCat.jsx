@@ -15,30 +15,51 @@ function findCategory(categories, slugs) {
   return current
 }
 
+function findCategoryForRoute(categories, slugs, legacyName = '') {
+  if (slugs.length > 1) return findCategory(categories, slugs)
+  const allCategories = []
+  const visit = (items) => items.forEach((item) => {
+    allCategories.push(item)
+    visit(categoryChildren(item))
+  })
+  visit(categories)
+  const targetSlug = slugs[0] || slugifyCategory(legacyName)
+  const matches = allCategories.filter((item) => categorySlug(item) === targetSlug)
+  if (targetSlug === 'portatiles') {
+    return matches.find((item) => slugifyCategory(categoryName(item)) === 'portatiles') ?? (matches.length === 1 ? matches[0] : null)
+  }
+  return matches.length === 1 ? matches[0] : null
+}
+
 function ProductosCat() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const legacyName = searchParams.get('nombreCat')
   const categoryPath = useMemo(() => {
-    const routePath = location.pathname.startsWith('/productos/') ? location.pathname.slice('/productos/'.length) : ''
+    const prefix = location.pathname.startsWith('/categorias/') ? '/categorias/' : '/productos/'
+    const routePath = location.pathname.startsWith(prefix) ? location.pathname.slice(prefix.length) : ''
     return routePath || (legacyName ? legacyName.split('/').map(slugifyCategory).join('/') : '')
   }, [location.pathname, legacyName])
   const slugs = useMemo(() => categoryPath.split('/').filter(Boolean), [categoryPath])
+  const descendants = searchParams.get('descendientes') === 'true'
   const [categoryTree, setCategoryTree] = useState([])
   const [categoryLabel, setCategoryLabel] = useState('')
   const [products, setProducts] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const requestKey = `${location.pathname}?${searchParams.toString()}#${retry}`
+  const [loadedKey, setLoadedKey] = useState('')
+  const displayStatus = loadedKey === requestKey ? status : 'loading'
 
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all([
-      getCategories({ signal: controller.signal }).catch(() => []),
-      getProductsByCategory(categoryPath, { signal: controller.signal }),
-    ]).then(([categories, result]) => {
+    getCategories({ signal: controller.signal }).then(async (categories) => {
+      const matched = findCategoryForRoute(categories, slugs, legacyName)
+      const mongoPath = matched?.pathCat || categoryPath
+      const result = await getProductsByCategory(mongoPath, { signal: controller.signal, descendants })
       setCategoryTree(categories)
-      const matched = findCategory(categories, slugs)
+      setLoadedKey(requestKey)
       setCategoryLabel(matched ? categoryName(matched) : (legacyName || slugs.at(-1) || 'Productos'))
       setProducts(result.products)
       setStatus(result.products.length ? 'ready' : 'empty')
@@ -46,22 +67,23 @@ function ProductosCat() {
       if (cause.name !== 'AbortError') {
         setError(cause.message || 'Ocurrió un error al cargar el catálogo.')
         setStatus('error')
+        setLoadedKey(requestKey)
       }
     })
     return () => controller.abort()
-  }, [categoryPath, legacyName, slugs, retry])
+  }, [categoryPath, descendants, legacyName, requestKey, slugs])
 
   // Tree lookup also makes labels resolve correctly when the data request is repeated after navigation.
-  const resolvedCategory = findCategory(categoryTree, slugs)
-  const title = resolvedCategory ? categoryName(resolvedCategory) : categoryLabel
+  const resolvedCategory = findCategoryForRoute(categoryTree, slugs, legacyName)
+  const title = resolvedCategory ? categoryName(resolvedCategory) : (displayStatus === 'loading' ? (legacyName || slugs.at(-1) || 'Productos') : categoryLabel)
 
   return (
     <main className="catalog-page">
       <h1>{title ? `Categoría: ${title}` : 'Catálogo'}</h1>
-      {status === 'loading' && <p className="catalog-message" role="status">Cargando productos…</p>}
-      {status === 'error' && <div className="catalog-message catalog-error" role="alert"><p>{error}</p><button type="button" onClick={() => { setStatus('loading'); setRetry((current) => current + 1) }}>Reintentar</button></div>}
-      {status === 'empty' && <p className="catalog-message">No hay productos en esta categoría.</p>}
-      {status === 'ready' && <>
+      {displayStatus === 'loading' && <p className="catalog-message" role="status">Cargando productos…</p>}
+      {displayStatus === 'error' && <div className="catalog-message catalog-error" role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((current) => current + 1)}>Reintentar</button></div>}
+      {displayStatus === 'empty' && <p className="catalog-message">No hay productos en esta categoría.</p>}
+      {displayStatus === 'ready' && <>
         <p className="catalog-count">{products.length} {products.length === 1 ? 'producto' : 'productos'}</p>
         <div className="catalog-grid">{products.map((product, index) => <ProductoCard key={product._id ?? product.id ?? `${product.nombre ?? product.name}-${index}`} product={product} />)}</div>
       </>}

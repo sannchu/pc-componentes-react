@@ -2,9 +2,11 @@
 
 ## Catálogo conectado a MongoDB
 
-El menú **Todas las categorías** consulta `GET /api/Tienda/Categorias` cada vez que se abre. La interfaz recorre recursivamente la jerarquía que devuelve la API; si esta entrega documentos planos de MongoDB, `pathCat` se usa para construir las relaciones padre-hijo. Al seleccionar una categoría se navega a `/productos/<ruta-de-categoría>`.
+El menú **Todas las categorías** consulta `GET /api/Tienda/Categorias` cada vez que se abre. La interfaz recorre recursivamente la jerarquía que devuelve la API; si esta entrega documentos planos de MongoDB, `pathCat` se usa para construir las relaciones padre-hijo. El panel de escritorio muestra raíces y descendientes a la vez; en móvil permite entrar y volver entre paneles. Los grupos que contienen categorías hijas se expanden como acordeón.
 
-La página de categoría consulta `GET /api/Tienda/Productos?categoria=<ruta>` y muestra todos los productos devueltos, incluidas las unidades no disponibles, sin limitar la solicitud a una página. Los estados de carga, error con reintento y resultado vacío se muestran en la interfaz.
+Las categorías se abren en `/categorias/<ruta-jerárquica>`; **Portátiles** usa la ruta solicitada `/categorias/portatiles`. Los enlaces “Todo en…” añaden `?descendientes=true` para que la API incluya los productos de toda la rama. La página convierte la ruta al `pathCat` de Mongo y consulta `GET /api/Tienda/Productos?categoria=<pathCat>`.
+
+La página muestra todos los productos devueltos, incluidas las unidades no disponibles, sin limitar la solicitud a una página. También conserva las rutas antiguas `/productos/*` y `/Productos/Categoria?nombreCat=...`. Los estados de carga, error con reintento y resultado vacío se muestran en la interfaz.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

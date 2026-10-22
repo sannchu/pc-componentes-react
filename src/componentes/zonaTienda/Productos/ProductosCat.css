@@ -10,6 +10,7 @@
 .product-card-image span { color: #737982; }
 .product-card-content { display: flex; flex: 1; flex-direction: column; padding: .85rem 1rem 1rem; }
 .product-brand { margin: 0 0 .3rem; color: #626a73; font-size: .85rem; }
+.product-availability { margin: 0 0 .35rem; color: #842029; font-size: .85rem; font-weight: 600; }
 .product-card h2 { margin: 0 0 .6rem; font-size: 1rem; line-height: 1.4; }
 .product-rating { margin: auto 0 .4rem; color: #343a40; font-size: .9rem; }
 .product-rating > span:first-child { color: #e2a400; }

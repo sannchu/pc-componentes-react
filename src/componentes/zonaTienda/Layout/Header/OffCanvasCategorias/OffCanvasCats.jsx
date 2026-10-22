@@ -84,23 +84,29 @@ function OffCanvasCats() {
       <aside ref={drawerRef} id="category-drawer" className={`category-drawer${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-labelledby="category-drawer-title" aria-hidden={!open}>
         <header className="category-drawer-header">
           {selectedRoot && <button type="button" className="category-back" onClick={() => setSelectedRoot(null)}>← Categorías</button>}
-          <h2 id="category-drawer-title">{selectedRoot ? categoryName(selectedRoot) : 'Categorías'}</h2>
+          <h2 id="category-drawer-title">Categorías</h2>
           <button type="button" className="category-close" aria-label="Cerrar categorías" onClick={close}>×</button>
         </header>
         <div className="category-drawer-body">
-          {status === 'loading' && <p role="status">Cargando categorías…</p>}
-          {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); getCategories().then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') }).catch(() => setStatus('error')) }}>Reintentar</button></div>}
-          {status === 'empty' && <p>No hay categorías disponibles.</p>}
-          {status === 'ready' && !selectedRoot && <ul className="category-list">
-            {categories.map((category) => {
-              const children = categoryChildren(category)
-              return <li key={category._id ?? categorySlug(category)} className="category-item">
-                {children.length ? <button type="button" className="category-root" onClick={() => setSelectedRoot(category)}>{categoryName(category)} <span aria-hidden="true">›</span></button> : <button type="button" className="category-link" onClick={() => goToCategory(category)}>{categoryName(category)}</button>}
-              </li>
-            })}
-          </ul>}
-          {status === 'ready' && selectedRoot && categoryChildren(selectedRoot).length === 0 && <p>Esta categoría no tiene subcategorías.</p>}
-          {status === 'ready' && selectedRoot && renderChildren(categoryChildren(selectedRoot), [categorySlug(selectedRoot)])}
+          <div className={`category-roots${selectedRoot ? ' has-selection' : ''}`} aria-label="Categorías principales">
+            {status === 'loading' && <p role="status">Cargando categorías…</p>}
+            {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); getCategories().then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') }).catch(() => setStatus('error')) }}>Reintentar</button></div>}
+            {status === 'empty' && <p>No hay categorías disponibles.</p>}
+            {status === 'ready' && <ul className="category-list">
+              {categories.map((category) => {
+                const children = categoryChildren(category)
+                return <li key={category._id ?? categorySlug(category)} className="category-item">
+                  {children.length ? <button type="button" className={`category-root${selectedRoot === category ? ' is-selected' : ''}`} aria-pressed={selectedRoot === category} onClick={() => setSelectedRoot(category)}>{categoryName(category)} <span aria-hidden="true">›</span></button> : <button type="button" className="category-link" onClick={() => goToCategory(category)}>{categoryName(category)}</button>}
+                </li>
+              })}
+            </ul>}
+          </div>
+          <section className={`category-subcategories${selectedRoot ? ' has-selection' : ''}`} aria-label={selectedRoot ? `Subcategorías de ${categoryName(selectedRoot)}` : 'Subcategorías'}>
+            {selectedRoot ? <>
+              <h3>{categoryName(selectedRoot)}</h3>
+              {categoryChildren(selectedRoot).length ? renderChildren(categoryChildren(selectedRoot), [categorySlug(selectedRoot)]) : <p>Esta categoría no tiene subcategorías.</p>}
+            </> : <p className="category-selection-hint">Selecciona una categoría para ver sus subcategorías.</p>}
+          </section>
         </div>
       </aside>
     </div>

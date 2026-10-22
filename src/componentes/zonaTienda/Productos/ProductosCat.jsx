@@ -60,7 +60,7 @@ function ProductosCat() {
       <h1>{title ? `Categoría: ${title}` : 'Catálogo'}</h1>
       {status === 'loading' && <p className="catalog-message" role="status">Cargando productos…</p>}
       {status === 'error' && <div className="catalog-message catalog-error" role="alert"><p>{error}</p><button type="button" onClick={() => { setStatus('loading'); setRetry((current) => current + 1) }}>Reintentar</button></div>}
-      {status === 'empty' && <p className="catalog-message">No hay productos disponibles en esta categoría.</p>}
+      {status === 'empty' && <p className="catalog-message">No hay productos en esta categoría.</p>}
       {status === 'ready' && <>
         <p className="catalog-count">{products.length} {products.length === 1 ? 'producto' : 'productos'}</p>
         <div className="catalog-grid">{products.map((product, index) => <ProductoCard key={product._id ?? product.id ?? `${product.nombre ?? product.name}-${index}`} product={product} />)}</div>

@@ -1,5 +1,11 @@
 # React + Vite
 
+## Catálogo conectado a MongoDB
+
+El menú **Todas las categorías** consulta `GET /api/Tienda/Categorias` cada vez que se abre. La interfaz recorre recursivamente la jerarquía que devuelve la API; si esta entrega documentos planos de MongoDB, `pathCat` se usa para construir las relaciones padre-hijo. Al seleccionar una categoría se navega a `/productos/<ruta-de-categoría>`.
+
+La página de categoría consulta `GET /api/Tienda/Productos?categoria=<ruta>` y muestra todos los productos devueltos, incluidas las unidades no disponibles, sin limitar la solicitud a una página. Los estados de carga, error con reintento y resultado vacío se muestran en la interfaz.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

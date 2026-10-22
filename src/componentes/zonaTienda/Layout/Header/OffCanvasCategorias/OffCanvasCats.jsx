@@ -7,6 +7,7 @@ function OffCanvasCats() {
   const [open, setOpen] = useState(false)
   const [categories, setCategories] = useState([])
   const [status, setStatus] = useState('loading')
+  const [reload, setReload] = useState(0)
   const [selectedRoot, setSelectedRoot] = useState(null)
   const [expanded, setExpanded] = useState({})
   const triggerRef = useRef(null)
@@ -14,12 +15,13 @@ function OffCanvasCats() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    if (!open) return undefined
     const controller = new AbortController()
     getCategories({ signal: controller.signal })
       .then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') })
       .catch((error) => { if (error.name !== 'AbortError') setStatus('error') })
     return () => controller.abort()
-  }, [])
+  }, [open, reload])
 
   const close = useCallback(() => setOpen(false), [])
   useEffect(() => {
@@ -77,7 +79,7 @@ function OffCanvasCats() {
 
   return (
     <div className="category-menu">
-      <button ref={triggerRef} className="category-trigger" type="button" aria-expanded={open} aria-controls="category-drawer" onClick={() => setOpen(true)}>
+      <button ref={triggerRef} className="category-trigger" type="button" aria-expanded={open} aria-controls="category-drawer" onClick={() => { setStatus('loading'); setOpen(true) }}>
         <span aria-hidden="true">☰</span> Todas las categorías
       </button>
       {open && <button className="category-backdrop" type="button" aria-label="Cerrar categorías" onClick={close} />}
@@ -90,7 +92,7 @@ function OffCanvasCats() {
         <div className="category-drawer-body">
           <div className={`category-roots${selectedRoot ? ' has-selection' : ''}`} aria-label="Categorías principales">
             {status === 'loading' && <p role="status">Cargando categorías…</p>}
-            {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); getCategories().then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') }).catch(() => setStatus('error')) }}>Reintentar</button></div>}
+            {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); setReload((current) => current + 1) }}>Reintentar</button></div>}
             {status === 'empty' && <p>No hay categorías disponibles.</p>}
             {status === 'ready' && <ul className="category-list">
               {categories.map((category) => {

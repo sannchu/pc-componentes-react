@@ -35,7 +35,7 @@ function ProductosCat() {
     const controller = new AbortController()
     Promise.all([
       getCategories({ signal: controller.signal }).catch(() => []),
-      getProductsByCategory(categoryPath, { page: 1, limit: 24, signal: controller.signal }),
+      getProductsByCategory(categoryPath, { signal: controller.signal }),
     ]).then(([categories, result]) => {
       setCategoryTree(categories)
       const matched = findCategory(categories, slugs)

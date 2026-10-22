@@ -1,87 +1,110 @@
 import './OffCanvas.css'
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { categoryChildren, categoryName, categorySlug, getCategories } from '../../../../../servicios/catalogo.js'
 
-function OffCanvasCats(){
+function OffCanvasCats() {
+  const [open, setOpen] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [status, setStatus] = useState('loading')
+  const [selectedRoot, setSelectedRoot] = useState(null)
+  const [expanded, setExpanded] = useState({})
+  const triggerRef = useRef(null)
+  const drawerRef = useRef(null)
+  const navigate = useNavigate()
 
-    const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('')
-    /*
-         hook useEffect() es una funcion js que adminte como parametros:
-            - 1º parametro: una funcion q se va a ejecutar siempre y cuando  se cambia el valor de alguna de las variables que se
-             definen como dependencia del efecto
-            - 2º parametro: un array de variables q al modificar su valor por cualquier motivo (evento, cambio del estado, ...)
-                provocara que se ejecute la funcion definida en el 1º parametro
-                
-                OJO!!!!! si el array esta vacio, la funcion del 1º parametro se ejecutara una sola vez 
-                al montar el componente y nunca mas
-    */
-    useEffect(
-        ()=>{
-            console.log('en teoria este efecto se ejecuta una sola vez al montar el componente OffCanvasCats');
-            console.log(`pq el ARRAY DE DEPENDENCIAS ESTA VACIO [] y no hay variables q
-                         al cambiar su valor provoquen la ejecucion del efecto`);
-        }, 
-        []
-    )
+  useEffect(() => {
+    const controller = new AbortController()
+    getCategories({ signal: controller.signal })
+      .then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') })
+      .catch((error) => { if (error.name !== 'AbortError') setStatus('error') })
+    return () => controller.abort()
+  }, [])
 
-    useEffect(
-        ()=>{
-            window.alert('has seleccionado la categoria: ' + categoriaSeleccionada);
-            console.log('efecto lanzado por haber clickeado en boton categoria y cambiar variable del state categoriaSeleccionada');
-        }, [ categoriaSeleccionada ]
-    )
+  const close = useCallback(() => setOpen(false), [])
+  useEffect(() => {
+    if (!open) return undefined
+    const trigger = triggerRef.current
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') close()
+      if (event.key === 'Tab') {
+        const focusable = drawerRef.current?.querySelectorAll('button:not(:disabled)')
+        if (!focusable?.length) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }
+    }
+    drawerRef.current?.querySelector('button')?.focus()
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.classList.add('category-drawer-open')
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.classList.remove('category-drawer-open')
+      trigger?.focus()
+    }
+  }, [open, close])
 
-    const navigate = useNavigate()
+  const goToCategory = (category, parentPath = []) => {
+    const path = [...parentPath, categorySlug(category)].filter(Boolean).join('/')
+    if (!path) return
+    navigate(`/productos/${path}`)
+    close()
+  }
 
-    return (
-        <div className="mt-5 mb-4">
-            <button className="btn btn-otuline-secondary" 
-                    type="button" 
-                    data-bs-toggle="offcanvas" 
-                    data-bs-target="#offcanvasWithBothOptions" 
-                    aria-controls="offcanvasWithBothOptions">
-                        <i className="fa-solid fa-bars"></i> Todas las categorias
-            </button>
+  const renderChildren = (items, parentPath, level = 1) => (
+    <ul className={`category-list category-list-level-${level}`}>
+      {items.map((item) => {
+        const children = categoryChildren(item)
+        const slug = categorySlug(item)
+        const path = [...parentPath, slug]
+        const isExpanded = Boolean(expanded[path.join('/')])
+        return (
+          <li key={item._id ?? path.join('/') } className="category-item">
+            <div className="category-item-row">
+              <button className="category-link" type="button" onClick={() => goToCategory(item, parentPath)}>
+                {categoryName(item)}
+              </button>
+              {children.length > 0 && <button className="category-expand" type="button" aria-label={`${isExpanded ? 'Contraer' : 'Expandir'} ${categoryName(item)}`} aria-expanded={isExpanded} onClick={() => setExpanded((current) => ({ ...current, [path.join('/')]: !current[path.join('/')] }))}>{isExpanded ? '−' : '+'}</button>}
+            </div>
+            {children.length > 0 && isExpanded && renderChildren(children, path, level + 1)}
+          </li>
+        )
+      })}
+    </ul>
+  )
 
-            <div className="offcanvas offcanvas-start" 
-                 data-bs-scroll="true" 
-                 tabIndex="-1" 
-                 id="offcanvasWithBothOptions" 
-                 aria-labelledby="offcanvasWithBothOptionsLabel">
-
-                    <div className="offcanvas-header">
-                        <h5 className="offcanvas-title" id="offcanvasWithBothOptionsLabel">Campañas y ofertas</h5>
-                        <button type="button" className="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                    </div>
-                    <hr></hr>
-
-                    <div className="offcanvas-body">
-                        <h3><strong>Categorias</strong></h3>
-                        <p>....cargar categorias principales invocando a servicio....</p>
-                        {
-                            /*
-                                ... pasando categoria por segmento variable en url: /Productos/Categoria/:nombreCat
-                                <div class="list-group">
-                                    <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> navigate('/Productos/Categoria/Componentes') }>Componentes</button>
-                                    <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> navigate('/Productos/Categoria/Ordenadores') }>Ordenadores</button>
-                                    <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> navigate('/Productos/Categoria/Perifericos') }>Perifericos</button>
-                                    <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> navigate('/Productos/Categoria/Consolas') }>Consolas</button>
-                                </div>                        
-
-                            */
-                        }
-                        { /* ... pasando categoria por query string en url: /Productos/Categoria?nombreCat=... */ }
-                        <div class="list-group">
-                            <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> { navigate('/Productos/Categoria?nombreCat=Componentes');  setCategoriaSeleccionada('Componentes'); }} >Componentes</button>
-                            <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> { navigate('/Productos/Categoria?nombreCat=Ordenadores') ; setCategoriaSeleccionada('Ordenadores'); } }>Ordenadores</button>
-                            <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> { navigate('/Productos/Categoria?nombreCat=Perifericos') ; setCategoriaSeleccionada('Perifericos'); } }>Perifericos</button>
-                            <button type="button" class="list-group-item list-group-item-action" onClick={ ()=> { navigate('/Productos/Categoria?nombreCat=Consolas');     setCategoriaSeleccionada('Consolas'); } }>Consolas</button>
-                        </div>                        
-                    </div>
-            </div>        
+  return (
+    <div className="category-menu">
+      <button ref={triggerRef} className="category-trigger" type="button" aria-expanded={open} aria-controls="category-drawer" onClick={() => setOpen(true)}>
+        <span aria-hidden="true">☰</span> Todas las categorías
+      </button>
+      {open && <button className="category-backdrop" type="button" aria-label="Cerrar categorías" onClick={close} />}
+      <aside ref={drawerRef} id="category-drawer" className={`category-drawer${open ? ' is-open' : ''}`} role="dialog" aria-modal="true" aria-labelledby="category-drawer-title" aria-hidden={!open}>
+        <header className="category-drawer-header">
+          {selectedRoot && <button type="button" className="category-back" onClick={() => setSelectedRoot(null)}>← Categorías</button>}
+          <h2 id="category-drawer-title">{selectedRoot ? categoryName(selectedRoot) : 'Categorías'}</h2>
+          <button type="button" className="category-close" aria-label="Cerrar categorías" onClick={close}>×</button>
+        </header>
+        <div className="category-drawer-body">
+          {status === 'loading' && <p role="status">Cargando categorías…</p>}
+          {status === 'error' && <div role="alert"><p>No se pudieron cargar las categorías.</p><button type="button" onClick={() => { setStatus('loading'); getCategories().then((data) => { setCategories(data); setStatus(data.length ? 'ready' : 'empty') }).catch(() => setStatus('error')) }}>Reintentar</button></div>}
+          {status === 'empty' && <p>No hay categorías disponibles.</p>}
+          {status === 'ready' && !selectedRoot && <ul className="category-list">
+            {categories.map((category) => {
+              const children = categoryChildren(category)
+              return <li key={category._id ?? categorySlug(category)} className="category-item">
+                {children.length ? <button type="button" className="category-root" onClick={() => setSelectedRoot(category)}>{categoryName(category)} <span aria-hidden="true">›</span></button> : <button type="button" className="category-link" onClick={() => goToCategory(category)}>{categoryName(category)}</button>}
+              </li>
+            })}
+          </ul>}
+          {status === 'ready' && selectedRoot && categoryChildren(selectedRoot).length === 0 && <p>Esta categoría no tiene subcategorías.</p>}
+          {status === 'ready' && selectedRoot && renderChildren(categoryChildren(selectedRoot), [categorySlug(selectedRoot)])}
         </div>
-    )
-
+      </aside>
+    </div>
+  )
 }
 
 export default OffCanvasCats

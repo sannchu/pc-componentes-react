@@ -1,0 +1,23 @@
+.category-menu { margin: 1.25rem 0 1rem; }
+.category-trigger { display: inline-flex; align-items: center; gap: .55rem; border: 1px solid #c7cbd1; border-radius: .35rem; background: #fff; padding: .6rem .85rem; color: #20242a; font: inherit; cursor: pointer; }
+.category-trigger:hover, .category-trigger:focus-visible { border-color: #16191d; }
+.category-backdrop { position: fixed; inset: 0; z-index: 1040; width: 100%; height: 100%; border: 0; background: rgb(0 0 0 / 48%); }
+.category-drawer { position: fixed; inset: 0 auto 0 0; z-index: 1045; display: flex; flex-direction: column; width: min(24rem, 90vw); background: #fff; box-shadow: 0 0 1.5rem rgb(0 0 0 / 20%); transform: translateX(-105%); visibility: hidden; transition: transform .22s ease, visibility .22s; }
+.category-drawer.is-open { transform: translateX(0); visibility: visible; }
+.category-drawer-header { display: flex; align-items: center; gap: .75rem; min-height: 4.25rem; padding: .8rem 1rem; border-bottom: 1px solid #e1e4e8; }
+.category-drawer-header h2 { flex: 1; margin: 0; font-size: 1.15rem; }
+.category-close, .category-back { border: 0; background: transparent; color: #20242a; font: inherit; cursor: pointer; }
+.category-close { font-size: 1.8rem; line-height: 1; }
+.category-drawer-body { overflow-y: auto; padding: .75rem 1rem 1rem; }
+.category-list { margin: 0; padding: 0; list-style: none; }
+.category-item { border-bottom: 1px solid #edf0f2; }
+.category-root, .category-link { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 2.9rem; padding: .65rem .45rem; border: 0; background: transparent; color: #20242a; text-align: left; font: inherit; cursor: pointer; }
+.category-root:hover, .category-link:hover, .category-root:focus-visible, .category-link:focus-visible { color: #075bb5; background: #f5f8fb; }
+.category-root span { font-size: 1.45rem; }
+.category-expand { min-width: 2.5rem; min-height: 2.5rem; border: 0; background: transparent; font-size: 1.25rem; cursor: pointer; }
+.category-item-row { display: flex; align-items: center; }
+.category-item-row .category-link { flex: 1; }
+.category-list-level-2, .category-list-level-3 { padding-left: 1rem; }
+.category-list-level-2 .category-link, .category-list-level-3 .category-link { font-size: .95rem; }
+body.category-drawer-open { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .category-drawer { transition: none; } }

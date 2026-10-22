@@ -6,7 +6,6 @@ import { RouterProvider, createBrowserRouter } from 'react-router'
 
 //import App from './App.jsx'
 import LoginRegistro from './componentes/zonaCliente/registro/LoginRegistro.jsx'
-import LoginGoogleCallback from './componentes/zonaCliente/registro/LoginGoogleCallback.jsx'
 import Layout from './componentes/zonaTienda/Layout/Layout.jsx'
 import Home from './componentes/zonaTienda/Home/Home.jsx'
 import ProductosCat from './componentes/zonaTienda/Productos/ProductosCat.jsx'
@@ -28,13 +27,12 @@ import ProductosCat from './componentes/zonaTienda/Productos/ProductosCat.jsx'
          element: <Layout />,
          children:[
           { path:'/', element: <Home/>},
-          { path:'Productos/Categoria', element: <ProductosCat/> } //<---- categoría recibida en query string para usar useSearchParams()
+          //{ path:'Productos/Categoria/:nombreCat', element: <ProductosCat/> } //<---- objeto Route con segmento variable para usar: useParams()
+           { path:'Productos/Categoria', element: <ProductosCat/> } //<------------ objeto Route con segmentos fijos y valores variables pasados por queryString para usar: useSearchParams()
          ]
         }, 
       //--- objeto route para la ruta de login y registro de clientes
       { path: '/Cliente/LoginRegistro', element: <LoginRegistro /> },
-      // El backend redirige aquí después de completar el callback OAuth de Google.
-      { path: '/Cliente/LoginGoogleCallback', element: <LoginGoogleCallback /> },
       //--- objeto route para el dashboard de clientes y rutas hijas para las diferentes secciones del dashboard
       //{}
     ] //<---- array de objetos Route de react-router
@@ -51,4 +49,5 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <RouterProvider router={routerObjects} />
   </StrictMode>,
-) 
+)
+

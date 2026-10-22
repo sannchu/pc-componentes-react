@@ -1,11 +1,13 @@
 import './Header.css'
 import { useNavigate } from 'react-router'
+import useStore from '../../../../stateGlobal/zustandStateSlices.js'
 import OffCanvasCats from './OffCanvasCategorias/OffCanvasCats.jsx'
+import SessionButton from './SessionButton/SessionButton.jsx'
 
 function Header(){
+  const { datosCliente }=useStore(); //<--- hook de ZUSTAND q devuelve el objeto global del store al cual tienen acceso todos los componentes de la app
   const saltarAUrl=useNavigate(); //<--- el hook useNavigate() de react-router nos permite saltar a una url si recargar toda la app desde el principio
                                   //invoca al modulo de enrutamiento y carga componente asociado a esa url
-  
   //console.log('valor de la variable satarAUrl: ', saltarAUrl)
 
 
@@ -49,9 +51,9 @@ function Header(){
                 <div className="d-flex flex-row justify-content-end mt-5 mb-4">
                     <button className="btn btn-outline-secondary btn-sm"><img src="/imagenes/icono_stars.png" alt="icono stars" /> Buscar con IA</button>
 
-                    <button className="btn btn-light btn-sm" onClick={ ()=> saltarAUrl('/Cliente/LoginRegistro')} >
-                        <i className="fa-regular fa-user"></i> Mi Cuenta
-                    </button>
+                    <SessionButton saltarAUrl={saltarAUrl} 
+                                   email={datosCliente?.cuenta.email || null} 
+                                   icono={ datosCliente?.cuenta.imagenAvatar || null}/>
 
                     <button className="btn btn-light btn-sm">
                         <i className="fa-solid fa-cart-shopping position-relative"></i> Mi Cesta
@@ -66,4 +68,4 @@ function Header(){
     )
 }
 
-export default Header 
+export default Header

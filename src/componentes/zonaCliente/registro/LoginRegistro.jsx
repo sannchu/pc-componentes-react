@@ -1,23 +1,61 @@
 import './LoginRegistro.css';
-import { useState } from 'react'
-import { useNavigate } from 'react-router'
-
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router';
+import useStore  from '../../../stateGlobal/zustandStateSlices';
 
 function LoginRegistro(){
-
-    const [ enLogin, setEnLogin ] = useState(false); // valor inicial es false, es decir, estamos en modo registro
-    const [ errorGoogle, setErrorGoogle ] = useState('');
     const navigate = useNavigate();
-    
+    const { setDatosCliente, setAccessToken, setRefreshToken, setSesionIniciada }=useStore();
+    const [ enLogin, setEnLogin ] = useState(false); // valor inicial es false, es decir, estamos en modo registro
     const [ formData, setFormData ] = useState(
         {
-            Nombre:'',
-            Email:'',
-            Password:'',
-            Repassword:''
+            nombre:'',
+            email:'',
+            password:'',
+            repassword:''
         }
     )
+    const divErrores=useRef(null); //referencia al div donde se muestran los mensajes de error del formulario de login/registro
+
+    //efecto que se ejecuta cuando se carga el componente, añade manejador de eventos "message" para recibir mensajes del popup
+    //de login con google
+
+    useEffect(
+        ()=>{
+            window.addEventListener('message', (evento)=>{
+                console.log('evento message recibido del popup de login con google, datos mandados por popup: ', evento.data);
+                
+                if(evento.data.codigo !== 0) {
+                    console.log('error al hacer login con google: ', evento.data.mensaje);
+                    //muestro mensaje de error en el div de mensajes de error del formulario de login/registro
+                    //en divErrores esta la referencia al <div...> del DOM de react donde quiero mostrarlos
+                    //es un objeto: { current: ...... }
+                    if(divErrores.current){
+                        divErrores.current.innerHTML=`
+                            <div class="alert alert-danger" role="alert">
+                                ${evento.data.mensaje}
+                            </div>
+                        `;
+                    }
+
+                } else {
+                    //1º cerrar el popup de login con google
+                    evento.source.close();
+
+                    //2º guardar en el store global de zustand los datos del cliente y los tokens JWT....
+                    setDatosCliente(evento.data.datos.cliente);
+                    setAccessToken(evento.data.datos.accessToken||'');
+                    setRefreshToken(evento.data.datos.refreshToken||'');
+                    setSesionIniciada(true);
+                    
+                    //3º redireccionar a la pagina principal de la tienda
+                    navigate('/');
+
+                }
+            });
+        },[navigate, setDatosCliente, setAccessToken, setRefreshToken, setSesionIniciada]
+    )
+
 
     // const [ nombreUsuario, setNombreUsuario ] = useState(''); // valor inicial del nombre de usuario es cadena vacia
     // const [ email, setEmail ] = useState(''); // valor inicial del email es cadena vacia
@@ -25,10 +63,10 @@ function LoginRegistro(){
     // const [ repassword, setRepassword ] = useState(''); // valor inicial del repassword es cadena vacia
 
     const camposFormulario = [
-      { label: "Nombre", type:"text", apareceEnLogin: false }, 
-      { label:"Email", type:"email", apareceEnLogin: true }, 
-      { label:"Password", type:"password", apareceEnLogin: true }, 
-      { label:"Repassword", type:"password", apareceEnLogin: false }
+      { id: "nombre", label: "Nombre", type:"text", apareceEnLogin: false }, 
+      { id: "email", label:"Email", type:"email", apareceEnLogin: true }, 
+      { id: "password", label:"Password", type:"password", apareceEnLogin: true }, 
+      { id: "repassword", label:"Repassword", type:"password", apareceEnLogin: false }
     ];
 
 
@@ -55,66 +93,52 @@ function LoginRegistro(){
 
   }
 
-  function clickCrearCuenta(){
-    //console.log('datos a mandar al server....', { nombreUsuario, email, password, repassword });
-    console.log('datos a mandar al server....', formData );
+  async function clickSendDataToServer(){
+    try{
+        //console.log('datos a mandar al server....', { nombreUsuario, email, password, repassword });
+        console.log('datos a mandar al server....', formData );
+
+        const urlEndPoint = `http://localhost:3000/api/Cliente/${ enLogin ? 'Login' : 'Registro' }`;
+        const petServer=await fetch(urlEndPoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+       
+        const datosRespuesta=await petServer.json();
+        console.log('datosRespuesta del server: ', datosRespuesta);
+        if(datosRespuesta.codigo !==0 ) throw new Error(datosRespuesta.mensaje);
+
+        //si llegamos aqui es que el login o registro ha sido correcto, guardamos en el store global los datos del cliente y los
+        //tokens SI ESTAMOS EN EL LOGIN, en registro no se manda nada, solo mensaje de activar cuenta...
+        if(enLogin){
+            setDatosCliente(datosRespuesta.datos.cliente);
+            setAccessToken(datosRespuesta.datos.accessToken||'');
+            setRefreshToken(datosRespuesta.datos.refreshToken||'');
+            setSesionIniciada(true);
+        }
+        navigate('/'); //redireccionamos a la pagina principal de la tienda
+
+    } catch(error){
+        console.log('error al crear cuenta: ', error);
+    }
   }
 
   async function handlerGoogleLoginClick(){
-    setErrorGoogle('');
+        try{
+            const urlPopupGoogle=await fetch('http://localhost:3000/api/Cliente/LoginGoogle');
+            const datosPopupGoogle=await urlPopupGoogle.json();
+            console.log('urlPopupGoogle: ', datosPopupGoogle.datos.url);
+            
+            window.open(datosPopupGoogle.datos.url, 'popupGoogle', 'width=600,height=600');
 
-    // Abrir la ventana durante el clic evita que el navegador bloquee el popup tras el fetch.
-    const popupGoogle=window.open('', 'popupGoogle', 'width=600,height=600');
-    if(!popupGoogle){
-      setErrorGoogle('El navegador ha bloqueado la ventana emergente de Google. Permítela e inténtalo de nuevo.');
-      return;
+        } catch(error){
+            console.log('error al hacer login con google: ', error);
+        }
     }
-
-    let temporizadorPopup;
-    const limpiarEventosPopup=()=>{
-      window.removeEventListener('message', recibirMensajeGoogle);
-      window.clearInterval(temporizadorPopup);
-    };
-
-    const recibirMensajeGoogle=(evento)=>{
-      if(evento.origin !== window.location.origin || evento.source !== popupGoogle) return;
-
-      if(evento.data?.tipo === 'LOGIN_GOOGLE_OK' && evento.data.token){
-        localStorage.setItem('token', evento.data.token);
-        if(evento.data.email) localStorage.setItem('email', evento.data.email);
-        if(evento.data.nombre) localStorage.setItem('nombre', evento.data.nombre);
-        limpiarEventosPopup();
-        navigate('/');
-      }else if(evento.data?.tipo === 'LOGIN_GOOGLE_ERROR'){
-        setErrorGoogle(evento.data.mensaje || 'No se pudo iniciar sesión con Google.');
-        limpiarEventosPopup();
-        popupGoogle.close();
-      }
-    };
-
-    window.addEventListener('message', recibirMensajeGoogle);
-    temporizadorPopup=window.setInterval(()=>{
-      if(popupGoogle.closed) limpiarEventosPopup();
-    }, 500);
-
-    try{
-      const respuesta=await fetch(`${API_URL}/api/Cliente/LoginGoogle`, {
-        credentials: 'include'
-      });
-      const respuestaJson=await respuesta.json();
-
-      if(!respuesta.ok || respuestaJson.codigo !== 0 || !respuestaJson.datos?.url){
-        throw new Error(respuestaJson.mensaje || 'El servidor no pudo iniciar el acceso con Google.');
-      }
-
-      popupGoogle.location.href=respuestaJson.datos.url;
-      popupGoogle.focus();
-    }catch(error){
-      limpiarEventosPopup();
-      popupGoogle.close();
-      setErrorGoogle(`Error al iniciar sesión con Google: ${error.message}`);
-    }
-  }
+ 
 
     return <div className="container">
         
@@ -135,8 +159,21 @@ function LoginRegistro(){
                 <div className="container">
                     
                     <div className="row"><div className="col"><h4><strong>{ enLogin ? "Iniciar sesión" : "Crear cuenta" }</strong></h4></div></div>
-                    <div className="row m-3"><div className="col d-grid gap-1"><button type="button" id="btnlogingmail" className="btn btn-light btn-sm" onClick={handlerGoogleLoginClick} aria-label="Iniciar sesión con Google"><img src="/imagenes/boton_login_GMAIL.png" alt="Iniciar sesión con Google"/></button></div></div>
-                    {errorGoogle && <div className="alert alert-danger" role="alert">{errorGoogle}</div>}
+                    <div className="row m-3">
+                        <div className="col d-grid gap-1">
+                            <button type="button" 
+                                    id="btnlogingmail"
+                                    className="btn btn-light btn-sm"
+                                    onClick={ handlerGoogleLoginClick } >
+                                <img  src="/imagenes/boton_login_GMAIL.png"/>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* div para MOSTRAR MENSAJES DE ERROR durante el LOGIN/REGISTRO */}
+                    <div className="row m-3" ref={divErrores}></div>
+
+
                     <div className="row"><div className="col m-4"><h6><span> O bien </span></h6></div></div>
 
                     <div className="row">
@@ -146,11 +183,11 @@ function LoginRegistro(){
                                             .map( campo => (
                                                             <div className="form-floating m-4" key={campo.label}>
                                                                 <input type={campo.type} 
-                                                                        id={`${campo.label}`} 
+                                                                        id={`${campo.id}`} 
                                                                         className="form-control" 
                                                                         placeholder={campo.label + "*"} 
                                                                         onChange={ changeInputs }/>
-                                                                <label className="form-label" htmlFor={`input${campo.label}`}>{campo.label}:</label>
+                                                                <label className="form-label" htmlFor={`input${campo.id}`}>{campo.label}:</label>
                                                             </div>
                                                         )
                             )
@@ -178,7 +215,7 @@ function LoginRegistro(){
 
                     <div className="row">
                         <div className="col-12 d-grid gap-1 mt-4 mb-4">
-                            <button type="button" className="btn  pccomponentes-primary" onClick={ clickCrearCuenta }>
+                            <button type="button" className="btn  pccomponentes-primary" onClick={ clickSendDataToServer }>
                             {
                                 enLogin ?
                                 <span>Iniciar sesion</span> 

@@ -79,7 +79,7 @@ function OffCanvasCats() {
 
   return (
     <div className="category-menu">
-      <button ref={triggerRef} className="category-trigger" type="button" aria-expanded={open} aria-controls="category-drawer" onClick={() => { setStatus('loading'); setOpen(true) }}>
+      <button ref={triggerRef} className="category-trigger" type="button" aria-expanded={open} aria-controls="category-drawer" onClick={() => { setStatus('loading'); setSelectedRoot(null); setExpanded({}); setOpen(true) }}>
         <span aria-hidden="true">☰</span> Todas las categorías
       </button>
       {open && <button className="category-backdrop" type="button" aria-label="Cerrar categorías" onClick={close} />}

@@ -1,40 +1,14 @@
 import './ProductosCat.css'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
-import { categoryChildren, categoryName, categorySlug, getCategories, getProductsByCategory, slugifyCategory } from '../../../servicios/catalogo.js'
+import { categoryName, findCategoryForRoute, getCategories, getProductsByCategory, hasAmbiguousCategorySlug, slugifyCategory } from '../../../servicios/catalogo.js'
 import ProductoCard from './ProductoCard.jsx'
-
-function findCategory(categories, slugs) {
-  let currentItems = categories
-  let current = null
-  for (const slug of slugs) {
-    current = currentItems.find((item) => categorySlug(item) === slug) ?? null
-    if (!current) return null
-    currentItems = categoryChildren(current)
-  }
-  return current
-}
-
-function findCategoryForRoute(categories, slugs, legacyName = '') {
-  if (slugs.length > 1) return findCategory(categories, slugs)
-  const allCategories = []
-  const visit = (items) => items.forEach((item) => {
-    allCategories.push(item)
-    visit(categoryChildren(item))
-  })
-  visit(categories)
-  const targetSlug = slugs[0] || slugifyCategory(legacyName)
-  const matches = allCategories.filter((item) => categorySlug(item) === targetSlug)
-  if (targetSlug === 'portatiles') {
-    return matches.find((item) => slugifyCategory(categoryName(item)) === 'portatiles') ?? (matches.length === 1 ? matches[0] : null)
-  }
-  return matches.length === 1 ? matches[0] : null
-}
 
 function ProductosCat() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const legacyName = searchParams.get('nombreCat')
+  const requestedPathCat = searchParams.get('pathCat') || ''
   const categoryPath = useMemo(() => {
     const prefix = location.pathname.startsWith('/categorias/') ? '/categorias/' : '/productos/'
     const routePath = location.pathname.startsWith(prefix) ? location.pathname.slice(prefix.length) : ''
@@ -55,7 +29,11 @@ function ProductosCat() {
   useEffect(() => {
     const controller = new AbortController()
     getCategories({ signal: controller.signal }).then(async (categories) => {
-      const matched = findCategoryForRoute(categories, slugs, legacyName)
+      const matched = findCategoryForRoute(categories, slugs, legacyName, requestedPathCat)
+      if (requestedPathCat && !matched) throw new Error('La ruta no coincide con la categoría indicada.')
+      if (!matched && slugs.length === 1 && hasAmbiguousCategorySlug(categories, slugs[0])) {
+        throw new Error('Esta categoría tiene una ruta ambigua. Ábrela desde el menú de categorías.')
+      }
       const mongoPath = matched?.pathCat || categoryPath
       const result = await getProductsByCategory(mongoPath, { signal: controller.signal, descendants })
       setCategoryTree(categories)
@@ -71,10 +49,10 @@ function ProductosCat() {
       }
     })
     return () => controller.abort()
-  }, [categoryPath, descendants, legacyName, requestKey, slugs])
+  }, [categoryPath, descendants, legacyName, requestKey, requestedPathCat, slugs])
 
   // Tree lookup also makes labels resolve correctly when the data request is repeated after navigation.
-  const resolvedCategory = findCategoryForRoute(categoryTree, slugs, legacyName)
+  const resolvedCategory = findCategoryForRoute(categoryTree, slugs, legacyName, requestedPathCat)
   const title = resolvedCategory ? categoryName(resolvedCategory) : (displayStatus === 'loading' ? (legacyName || slugs.at(-1) || 'Productos') : categoryLabel)
 
   return (

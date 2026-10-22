@@ -1,15 +1,7 @@
 import './OffCanvas.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { categoryChildren, categoryName, categorySlug, getCategories, slugifyCategory } from '../../../../../servicios/catalogo.js'
-
-function routeForCategory(category, parentPath = []) {
-  const slug = categorySlug(category)
-  // The laptop category is specifically exposed at /categorias/portatiles.
-  const isLaptops = slug === 'portatiles' && slugifyCategory(categoryName(category)) === 'portatiles'
-  const segments = isLaptops ? [slug] : [...parentPath, slug]
-  return `/categorias/${segments.filter(Boolean).join('/')}`
-}
+import { categoryChildren, categoryName, categoryRoute, categorySlug, getCategories, slugifyCategory } from '../../../../../servicios/catalogo.js'
 
 function CategoryIcon({ category }) {
   const icon = typeof category?.icon === 'string' ? category.icon.trim() : ''
@@ -65,8 +57,11 @@ function OffCanvasCats() {
   }, [open, close])
 
   const goToCategory = (category, parentPath = [], descendants = false) => {
-    const route = routeForCategory(category, parentPath)
-    navigate(`${route}${descendants ? '?descendientes=true' : ''}`)
+    const route = categoryRoute(category, parentPath, categories)
+    const [pathname, search = ''] = route.split('?')
+    const params = new URLSearchParams(search)
+    if (descendants) params.set('descendientes', 'true')
+    navigate(params.size ? `${pathname}?${params.toString()}` : pathname)
     close()
   }
 

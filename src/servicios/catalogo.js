@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api/Tienda'
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:3000/api/Tienda'
 
 export function slugifyCategory(value = '') {
   return String(value)
@@ -21,6 +21,66 @@ export function categorySlug(category) {
 export function categoryChildren(category) {
   const children = category?.hijos ?? category?.children ?? category?.subcategorias ?? []
   return Array.isArray(children) ? children : []
+}
+
+function flattenCategories(categories, result = []) {
+  for (const category of categories) {
+    result.push(category)
+    flattenCategories(categoryChildren(category), result)
+  }
+  return result
+}
+
+function findCategoryByPath(categories, pathCat) {
+  if (!pathCat) return null
+  const matches = flattenCategories(categories).filter((category) => String(category?.pathCat ?? '') === String(pathCat))
+  return matches.length === 1 ? matches[0] : null
+}
+
+function findNestedCategory(categories, slugs) {
+  let currentItems = categories
+  let current = null
+  for (const slug of slugs) {
+    current = currentItems.find((item) => categorySlug(item) === slug) ?? null
+    if (!current) return null
+    currentItems = categoryChildren(current)
+  }
+  return current
+}
+
+export function findCategoryForRoute(categories, slugs, legacyName = '', requestedPathCat = '') {
+  const allCategories = flattenCategories(categories)
+  const routeSlugs = slugs.length ? slugs : (legacyName ? legacyName.split('/').map(slugifyCategory) : [])
+  const categoryFromPath = findCategoryByPath(categories, requestedPathCat)
+  if (categoryFromPath) {
+    const routeMatchesCategory = routeSlugs.length <= 1
+      ? categorySlug(categoryFromPath) === (routeSlugs[0] || '')
+      : findNestedCategory(categories, routeSlugs)?.pathCat === categoryFromPath.pathCat
+    if (routeMatchesCategory) return categoryFromPath
+  }
+
+  if (routeSlugs.length > 1) return findNestedCategory(categories, routeSlugs)
+  const targetSlug = routeSlugs[0] || ''
+  const matches = allCategories.filter((item) => categorySlug(item) === targetSlug)
+  if (targetSlug === 'portatiles') {
+    return matches.find((item) => slugifyCategory(categoryName(item)) === 'portatiles') ?? (matches.length === 1 ? matches[0] : null)
+  }
+  return matches.length === 1 ? matches[0] : null
+}
+
+export function hasAmbiguousCategorySlug(categories, slug) {
+  return flattenCategories(categories).filter((category) => categorySlug(category) === slug).length > 1
+}
+
+export function categoryRoute(category, parentPath = [], categories = []) {
+  const slug = categorySlug(category)
+  const isLaptops = slug === 'portatiles' && slugifyCategory(categoryName(category)) === 'portatiles'
+  const segments = isLaptops ? [slug] : [...parentPath, slug]
+  const path = `/categorias/${segments.filter(Boolean).join('/')}`
+  const isSingleSlugAmbiguous = segments.length === 1 && hasAmbiguousCategorySlug(categories, slug)
+  return isSingleSlugAmbiguous && category?.pathCat
+    ? `${path}?pathCat=${encodeURIComponent(category.pathCat)}`
+    : path
 }
 
 function buildCategoryTree(categories) {

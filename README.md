@@ -4,7 +4,9 @@
 
 El menú **Todas las categorías** consulta `GET /api/Tienda/Categorias` cada vez que se abre. La interfaz recorre recursivamente la jerarquía que devuelve la API; si esta entrega documentos planos de MongoDB, `pathCat` se usa para construir las relaciones padre-hijo. El panel de escritorio muestra raíces y descendientes a la vez; en móvil permite entrar y volver entre paneles. Los grupos que contienen categorías hijas se expanden como acordeón.
 
-Las categorías se abren en `/categorias/<ruta-jerárquica>`; **Portátiles** usa la ruta solicitada `/categorias/portatiles`. Los enlaces “Todo en…” añaden `?descendientes=true` para que la API incluya los productos de toda la rama. La página convierte la ruta al `pathCat` de Mongo y consulta `GET /api/Tienda/Productos?categoria=<pathCat>`.
+Las categorías se abren en `/categorias/<ruta-jerárquica>`; **Portátiles** usa la ruta solicitada `/categorias/portatiles`. Si una ruta de un solo slug es ambigua, el menú añade `pathCat=<pathCat>` y la página valida ese identificador contra el árbol de Mongo antes de consultar productos. Los enlaces “Todo en…” añaden `descendientes=true` para que la API incluya los productos de toda la rama. La página convierte la ruta al `pathCat` de Mongo y consulta `GET /api/Tienda/Productos?categoria=<pathCat>`.
+
+La URL base de la API se puede configurar con `VITE_API_BASE_URL` (por ejemplo, `http://localhost:3001/api/Tienda`); por defecto usa `http://localhost:3000/api/Tienda`.
 
 La página muestra todos los productos devueltos, incluidas las unidades no disponibles, sin limitar la solicitud a una página. También conserva las rutas antiguas `/productos/*` y `/Productos/Categoria?nombreCat=...`. Los estados de carga, error con reintento y resultado vacío se muestran en la interfaz.
 

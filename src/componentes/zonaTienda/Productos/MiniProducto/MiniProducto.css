@@ -1,0 +1,68 @@
+.mini-producto.card {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.9rem;
+    background-color: #fff;
+    cursor: pointer;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.mini-producto.card:hover,
+.mini-producto.card:focus-visible {
+    transform: translateY(-4px);
+    border-color: #ff6900;
+    box-shadow: 0 0.8rem 1.8rem rgba(17, 24, 39, 0.14);
+}
+
+.mini-producto.card:focus-visible {
+    outline: 3px solid rgba(255, 105, 0, 0.28);
+    outline-offset: 3px;
+}
+
+.mini-producto .carousel-inner {
+    background: #fff;
+}
+
+.mini-producto .carousel-item img {
+    height: 13.5rem;
+    padding: 1rem;
+    object-fit: contain;
+    transition: transform 220ms ease;
+}
+
+.mini-producto:hover .carousel-item.active img {
+    transform: scale(1.035);
+}
+
+.mini-producto .card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.mini-producto .card-title {
+    min-height: 2.8em;
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+.mini-producto .card-text:last-child {
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mini-producto.card,
+    .mini-producto .carousel-item img {
+        transition: none;
+    }
+
+    .mini-producto.card:hover,
+    .mini-producto.card:focus-visible {
+        transform: none;
+    }
+}

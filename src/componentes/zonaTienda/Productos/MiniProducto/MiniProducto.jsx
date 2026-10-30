@@ -1,37 +1,10 @@
 import {useNavigate} from 'react-router'
-import './MiniProducto.css'
 
 export default function MiniProducto({ producto }) {
     const navigate = useNavigate();
-    const rutaDetalles = `/Producto/${producto._id}`
-
-    function abrirDetalles() {
-        navigate(rutaDetalles)
-    }
-
-    function manejarClick(ev) {
-        if (ev.target.closest('button')) return
-        abrirDetalles()
-    }
-
-    function manejarTeclado(ev) {
-        if (ev.target !== ev.currentTarget) return
-
-        if (ev.key === 'Enter' || ev.key === ' ') {
-            ev.preventDefault()
-            abrirDetalles()
-        }
-    }
 
     return (
-            <div
-                className="card mini-producto"
-                onClick={manejarClick}
-                onKeyDown={manejarTeclado}
-                role="link"
-                tabIndex={0}
-                aria-label={`Ver detalles de ${producto.nombre}`}
-            >
+            <div className="card" style={{width: '18rem'}} onClick={() => navigate(`/DetallesProducto/${producto._id}`)}>
 
                 <div id={`carouselProducto-${producto._id}`} className="carousel slide">
                     <div className="carousel-indicators">
@@ -56,7 +29,7 @@ export default function MiniProducto({ producto }) {
                             producto.imagenes.map(
                                 (imagen, index) => (
                                     <div key={index} className={`carousel-item ${index === 0 ? 'active' : ''}`}>
-                                        <img src={imagen} className="d-block w-100" alt={`Imagen ${index + 1}`} />
+                                        <img src={imagen} className="d-block w-100" alt={`Imagen ${index + 1}`} onClick={() => navigate(`/Producto/${producto._id}`)} />
                                     </div>
                                 )
                             )

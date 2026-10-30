@@ -1,0 +1,23 @@
+.mini-producto-offcanvas {
+    border-color: var(--bs-border-color);
+}
+
+.mini-producto-offcanvas-imagen,
+.mini-producto-offcanvas-sin-imagen {
+    width: 100%;
+    height: 6rem;
+    object-fit: contain;
+}
+
+.mini-producto-offcanvas-sin-imagen {
+    display: block;
+    background: var(--bs-tertiary-bg);
+}
+
+.mini-producto-offcanvas-nombre {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 1rem;
+}

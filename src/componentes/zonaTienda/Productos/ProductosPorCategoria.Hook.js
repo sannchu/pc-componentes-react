@@ -8,44 +8,22 @@ export default function useProductosPorCategoria(pathCat) {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!pathCat) return;
-
-        const controller = new AbortController();
-
+        if (!pathCat) { return; }
         async function fetchProductos() {
             setCargando(true);
             setError(null);
 
-            try {
-                const response = await fetch(
-                    `${API_PRODUCTOS}?pathCat=${encodeURIComponent(pathCat)}`,
-                    { signal: controller.signal }
-                );
-                const respuesta = await response.json();
+            const petProductos=await fetch(`${API_PRODUCTOS}?pathCat=${pathCat}`);
+            const respuesta=await petProductos.json();
 
-                if (!response.ok || respuesta.codigo !== 0) {
-                    throw new Error(respuesta.mensaje || 'No se pudieron obtener los productos');
-                }
+            if (respuesta.codigo !== 0) throw new Error(`Error al obtener los productos: ${respuesta.mensaje}`);
 
-                setProductos(respuesta.datos?.productos ?? []);
-            } catch (errorCarga) {
-                if (errorCarga.name !== 'AbortError') {
-                    console.error('Error al obtener los productos:', errorCarga);
-                    setError(errorCarga.message);
-                    setProductos([]);
-                }
-            } finally {
-                if (!controller.signal.aborted) setCargando(false);
-            }
+            setProductos(respuesta.datos?.productos ?? []);
+            setCargando(false);
         }
 
         fetchProductos();
-        return () => controller.abort();
     }, [pathCat]);
 
-   return {
-       productos: pathCat ? productos : [],
-       cargando: Boolean(pathCat) && cargando,
-       error: pathCat ? error : null
-   };
+   return { productos, cargando, error };
 }

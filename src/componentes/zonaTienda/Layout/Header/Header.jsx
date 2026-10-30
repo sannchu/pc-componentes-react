@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router'
 import useStore from '../../../../stateGlobal/zustandStateSlices.js'
 import OffCanvasCats from './OffCanvasCategorias/OffCanvasCats.jsx'
 import SessionButton from './SessionButton/SessionButton.jsx'
+import OffCanvasCarrito from '../../Carrito/OffCanvasCarrito/OffCanvas.jsx'
 
 function Header(){
-  const { datosCliente }=useStore(); //<--- hook de ZUSTAND q devuelve el objeto global del store al cual tienen acceso todos los componentes de la app
+  const { datosCliente, carrito }=useStore(); //<--- hook de ZUSTAND q devuelve el objeto global del store al cual tienen acceso todos los componentes de la app
+  const cantidadArticulos = carrito?.itemsPedido?.reduce(
+    (total, item) => total + (Number(item.cantidad) || 0),
+    0,
+  ) || 0
   const saltarAUrl=useNavigate(); //<--- el hook useNavigate() de react-router nos permite saltar a una url si recargar toda la app desde el principio
                                   //invoca al modulo de enrutamiento y carga componente asociado a esa url
   //console.log('valor de la variable satarAUrl: ', saltarAUrl)
@@ -55,8 +60,12 @@ function Header(){
                                    email={datosCliente?.cuenta.email || null} 
                                    icono={ datosCliente?.cuenta.imagenAvatar || null}/>
 
-                    <button className="btn btn-light btn-sm">
-                        <i className="fa-solid fa-cart-shopping position-relative"></i> Mi Cesta
+                    <button className="btn btn-light btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#offCanvasCarrito" aria-controls="offCanvasCarrito">
+                        <span className="position-relative me-1">
+                          <i className="fa-solid fa-cart-shopping"></i>
+                          {cantidadArticulos > 0 && <span className="badge rounded-pill text-bg-danger position-absolute top-0 start-100 translate-middle">{cantidadArticulos}</span>}
+                        </span>
+                        Mi Cesta
                     </button>
                 </div>
                 
@@ -64,6 +73,7 @@ function Header(){
         </div>
 
         {/* .... fila opcional para mostrar links q ha usado el usuario u ofertas relevantes...paso de hacerlo  */}
+        <OffCanvasCarrito />
     </div>
     )
 }
